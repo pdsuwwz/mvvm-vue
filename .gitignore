@@ -1,0 +1,14 @@
+bower_components
+node_modules
+.DS_Store
+src/.DS_Store
+*.log
+.cache
+.idea
+public
+vendor
+dist
+/bundle-config.json
+src/schemas
+src/models/.DS_Store
+.vscode
