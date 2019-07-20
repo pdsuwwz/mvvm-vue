@@ -103,7 +103,7 @@ export default class Observer {
 对应 mvvm 中更新如下
 
 ```js
-// mvvm/index.js
+// src/mvvm/index.js
 import Observer from './observer'
 
 export default class Mvvm {
