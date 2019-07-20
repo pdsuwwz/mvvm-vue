@@ -3,16 +3,22 @@
   "version": "1.0.0",
   "description": "A mvvm framework",
   "scripts": {
-    "start": "webpack-dev-server --open --port 8080 --hot --host 127.0.0.1"
+    "start": "cross-env NODE_ENV=development webpack-dev-server --port 8080 --inline --host 127.0.0.1",
+    "build": "cross-env NODE_ENV=production webpack --progress --colors --config webpack.config.js && node server.js"
+  },
+  "repository": {
+    "url": "git@github.com:pdsuwwz/mvvm-vue.git"
   },
   "author": "Wisdom",
   "license": "MIT",
   "dependencies": {
+    "express": "^4.17.1"
   },
   "devDependencies": {
     "@babel/core": "^7.5.4",
     "@babel/preset-env": "^7.5.4",
     "babel-loader": "^8.0.6",
+    "cross-env": "^5.2.0",
     "friendly-errors-webpack-plugin": "^1.7.0",
     "html-webpack-plugin": "^3.2.0",
     "node-notifier": "^5.4.0",

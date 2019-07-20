@@ -5,7 +5,7 @@ const notifier = require('node-notifier');
 const resolve = (dir) => path.join(__dirname, dir)
 
 module.exports = {
-  devtool: 'cheap-module-eval-source-map',
+  mode: process.env.NODE_ENV,
   devServer: {
     disableHostCheck: true,
     quiet: true,
@@ -15,7 +15,7 @@ module.exports = {
   },
   output: {
     path: resolve('dist'),
-    filename: '[name].bundle.js'
+    filename: '[name].bundle.js',
   },
   plugins: [
     new HtmlWebapckPlugin({
