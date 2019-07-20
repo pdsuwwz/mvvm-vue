@@ -117,3 +117,30 @@ export default class Mvvm {
 }
 
 ```
+
+## 数据代理
+
+我们知道在 Vue 中，可以直接通过实例来获取 data 属性，如 `this.a`， `this.b.c` 这样的写法
+
+但是现在我们是这样使用的： `this.$data.a`，`this.$data.b.c`很不方便对吧，怎么办呢？
+
+其实我们再加一层代理就可以解决了
+
+```js
+// src/mvvm/index.js
+...
+proxyData(data) {
+  for(let key in data) {
+    Object.defineProperty(this, key, {
+      enumerable: true,
+      get() {
+        return data[key]
+      },
+      set(newVal) {
+        data[key] = newVal
+      }
+    })
+  }
+}
+...
+```
