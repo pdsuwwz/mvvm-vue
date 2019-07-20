@@ -1,2 +1,12 @@
 import Mvvm from './mvvm'
-console.log(Mvvm)
+
+const mvvm = new Mvvm({
+  el: '#app',
+  data: {
+    a: 233,
+    b: {
+      c: 'hello'
+    },
+  }
+})
+console.log(mvvm)
