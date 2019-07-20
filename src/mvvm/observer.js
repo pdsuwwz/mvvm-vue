@@ -1,5 +1,8 @@
 export default class Observer {
   constructor(data) {
+    this.initData(data)
+  }
+  initData(data) {
     for(let key in data) {
       let value = data[key]
       this.observe(value)
