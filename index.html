@@ -8,9 +8,13 @@
 </head>
 <body>
   <div id="app">
-    a 的值： <input v-model="a">
+    a 的值-v-text： <span v-text="a"></span>
+    <br>
+    a 的值-v-model： <input v-model="a">
     <div>b.c 的值 {{b.c}}</div>
+    <div>a 和 c 的值分别为： {{a}} 和 {{b.c}}</div>
     <div>a 的值 {{a}}</div>
+    a 的值: {{a}}
   </div>
 </body>
 </html>
