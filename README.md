@@ -393,9 +393,170 @@ CompileUtil.updater = {
 
 # Watcher
 
-充当数据的监视作用，当数据发生改变的时候，触发对应视图中节点状态的更新回调
+充当数据的监视作用，当数据发生改变的时候，触发对应视图中节点状态的`更新回调`
 
+我们已知要在数据发生改变的时候触发 watcher ，从而触发视图的数据更新
 
+所以我们要在刚开始编译的时候就将`更新回调`加到每个动态节点上
 
+即在 `CompileUtil.updater` 中的所有关于节点的更新方法内放置 watcher实例对吧，就像这样
+
+```js
+// src/mvvm/compile-util.js
+CompileUtil.updater = {
+  ...
+  model(node, expression, vm) {
+    const value = this.getValue(expression, vm)
+    new Watcher(vm, expression, (newVal) => {
+      // 更新节点
+      node.value = newVal
+    })
+    node.value = value
+  },
+  html(node, expression, vm) {
+    const value = this.getValue(expression, vm)
+    new Watcher(vm, expression, (newVal) => {
+      // 更新节点
+      node.innerHTML = newVal
+    })
+    node.innerHTML = value
+  },
+  ...
+}
+```
+
+watcher 类的构造函数传入了三个参数，分别是：mvvm 实例，模板表达式，更新回调
+
+那么 watcher 就可以这样来实现，我们还可以看到有一个 `update()` 方法
+
+它是在数据发生改变的时候被触发，也就意味着传入的回调被触发了
+
+回调被触发也就代表了我们刚才实例化 watcher 时更新节点的操作被触发：`node.value = newVal`, `node.innerHTML = newVal`...
+
+那么问题又有了，谁来驱动执行 `update()` 呢，我们只实例化 watcher 肯定是不行的，还需要有一个 `消息订阅` Dep 机制
+
+```js
+// src/mvvm/watcher.js
+export default class Watcher {
+  constructor(vm, expression, callback) {
+    this.vm = vm
+    this.expression = expression
+    this.callback = callback
+    this.oldValue = this.getValue()
+  }
+  update() {
+    const newVal = this.getValue()
+    if (this.oldValue !== newVal) {
+      this.oldValue = newVal
+      this.callback(newVal)
+    }
+  }
+  getValue() {
+    const value = Util.getValueFromData(this.expression, this.vm)
+    return value
+  }
+}
+```
+
+# Dep
+
+应用了发布订阅模式，本质上就是，Dep 包含了一个数组，用于收集所有注册过的 `watcher`（订阅），当数据发生变化时，触发 dep 中的 `notify()`（发布），也就是触发 `watcher` 上的 `update()` 方法，从而更新视图
+
+Dep 代码比较简单，这里直接列出来
+
+```js
+export default class Dep {
+  constructor() {
+    this.subs = []
+  }
+  // 收集 watcher，相当于订阅
+  addSub(watcher) {
+    this.subs.push(watcher)
+  }
+  // 触发 watcher 上的 update(), 相当于发布
+  notify() {
+    this.subs.forEach(watcher => watcher.update())
+  }
+}
+```
+
+在哪里使用 Dep 呢，有一点我们知道，那就是 Dep 中 subs 数组里存放的是一个个的 watcher 实例
+
+在讨论 watcher 的时候，我们知道了，当数据发生改变时触发 Dep 的 `notify()`
+
+`notify()` 会触发收集的 watcher 实例上的 `update()` 方法
+
+我们可以在 `Object.defineProperty` 中的 `getter` 里收集 watcher
+
+然后在 `setter` 里触发 `notify()`
+
+不过有一点需要注意，getter 中囊括了全部数据的劫持，如果我们有一些数据没有用到的话，那么也就意味着这些数据没有对应的 watcher
+
+也就是说劫持这些数据时就不需要被 Dep 订阅到了，这个该如何判断呢？
+
+我们知道，js 是单线程的，代码依次从上到下执行，我们可以利用这个特点，修改 watcher
+
+```js
+// src/mvvm/watcher.js
+export default class Watcher {
+  constructor(vm, expression, callback) {
+    this.vm = vm
+    this.expression = expression
+    this.callback = callback
+    // 这里我们先在 Dep 上存一份 watcher 实例，然后根据模板表达式获取 data ，这样会触发 data 的 getter，我们在 getter 中做一个 Dep.target 的判断，如果有则收集到 Dep 中，完毕之后再将 Dep.target 置为空
+    Dep.target = this
+    this.oldValue = this.getValue()
+    Dep.target = null
+  }
+  update() {
+    const newVal = this.getValue()
+    if (this.oldValue !== newVal) {
+      this.oldValue = newVal
+      this.callback(newVal)
+    }
+  }
+  getValue() {
+    const value = Util.getValueFromData(this.expression, this.vm)
+    return value
+  }
+}
+```
+
+我们注意到 `Dep.target` 会在 data 的 getter 中做出判断
+
+```js
+// src/mvvm/observer.js
+class Observer {
+  ...
+  initData(data) {
+    for(let key in data) {
+      let value = data[key]
+      this.observe(value)
+       // 这里实例化 Dep
+      const dep = new Dep()
+      Object.defineProperty(data, key, {
+        enumerable: true,
+        get() {
+          // 这里过滤掉没有 watcher 的 data（消息订阅）
+          Dep.target && dep.addSub(Dep.target)
+          return value
+        },
+        set: (newVal) => {
+          if (newVal === value) {
+            return;
+          }
+          value = newVal
+          // 触发 watcher 的 update()（消息发布）
+          dep.notify()
+          this.observe(value)
+        }
+      })
+    }
+  }
+  ...
+}
+```
+
+好了，可以打开浏览器控制台执行 `mvvm.b.c = 'hello2'`测试 ，发现视图确实更新了，那么我们的数据驱动视图的功能就基本完成了，还差一些事件的绑定，计算属性等。 
 
 

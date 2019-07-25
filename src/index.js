@@ -10,3 +10,4 @@ const mvvm = new Mvvm({
   }
 })
 console.log(mvvm)
+window.mvvm = mvvm

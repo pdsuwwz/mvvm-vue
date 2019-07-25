@@ -1,6 +1,5 @@
 import Observer from './observer'
 import Compiler from './compiler';
-
 export default class Mvvm {
   constructor(options = {}) {
     const { el, data } = options

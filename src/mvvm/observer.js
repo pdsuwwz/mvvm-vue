@@ -1,3 +1,5 @@
+import Dep from "./dep";
+
 export default class Observer {
   constructor(data) {
     this.initData(data)
@@ -6,9 +8,11 @@ export default class Observer {
     for(let key in data) {
       let value = data[key]
       this.observe(value)
+      const dep = new Dep()
       Object.defineProperty(data, key, {
         enumerable: true,
         get() {
+          Dep.target && dep.addSub(Dep.target)
           return value
         },
         set: (newVal) => {
@@ -16,6 +20,7 @@ export default class Observer {
             return;
           }
           value = newVal
+          dep.notify()
           this.observe(value)
         }
       })
